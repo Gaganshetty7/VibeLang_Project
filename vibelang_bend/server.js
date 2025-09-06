@@ -5,18 +5,23 @@ require('dotenv').config();
 const app = express();
 app.use(express.json());
 
-const HF_API_URL = 'https://api-inference.huggingface.co/models/facebook/mbart-large-50-many-to-many-mmt';
+const HF_API_URL = 'https://router.huggingface.co/hf-inference/models/facebook/mbart-large-50-many-to-many-mmt';
 const HF_API_TOKEN = process.env.HF_API_TOKEN;
 
 app.post('/translate', async (req, res) => {
   try {
-    const { text, targetLang } = req.body;
-    if (!text || !targetLang) {
-      return res.status(400).json({ error: 'Both text and targetLang are required' });
+    const { text, sourceLang, targetLang } = req.body;
+    if (!text || !sourceLang || !targetLang) {
+      return res.status(400).json({ error: 'text, sourceLang, and targetLang are all required' });
     }
 
-    // Format input for mbart model: ">>targetLang<< text"
-    const inputs = `>>${targetLang}<< ${text}`;
+    const body = {
+      inputs: text,
+      parameters: {
+        src_lang: sourceLang,
+        tgt_lang: targetLang,
+      },
+    };
 
     const response = await fetch(HF_API_URL, {
       method: 'POST',
@@ -24,7 +29,7 @@ app.post('/translate', async (req, res) => {
         Authorization: `Bearer ${HF_API_TOKEN}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ inputs }),
+      body: JSON.stringify(body),
     });
 
     const data = await response.json();
